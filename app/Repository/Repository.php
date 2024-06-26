@@ -7,17 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 
 abstract class Repository
 {
+    private string $modelClass;
     private Builder $query;
 
-    public function __construct(string|Model|Builder $query)
+    public function __construct(string $modelClass)
     {
-        if (!is_string($query) && is_subclass_of($query, Model::class)) {
-            $query = $query::class;
-        }
-        if (is_string($query)) {
-            $query = $query::query();
-        }
-        $this->query = $query;
+        $this->modelClass = $modelClass;
+        $this->query = $modelClass::query();
     }
 
     public function getAll(): array
@@ -27,7 +23,13 @@ abstract class Repository
 
     public function getFirstBy(array $conditions): ?Model
     {
-        return $this->getBy($conditions)->first();
+        $res = $this->getBy($conditions)->first();
+        /**
+         * somehow element queried by where->first would disappear from where->all request
+         * to same query, so need to update this->query :))
+         */
+        $this->query = $this->modelClass::query();
+        return $res;
     }
 
     public function getAllBy(array $conditions): array
